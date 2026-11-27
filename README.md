@@ -7,6 +7,8 @@
 - 만든 방식: HTML/CSS/JS 정적 파일 + GitHub Pages (서버·API 키·결제 없음, 0원)
 - 영상·사진·목소리는 **기기 밖으로 나가지 않습니다** (모든 처리는 브라우저 안)
 
+<img src="assets/screenshot-mobile.png" alt="진진 숏폼 편집기 모바일 화면" width="300">
+
 ---
 
 ## 1. 무엇을 할 수 있나
