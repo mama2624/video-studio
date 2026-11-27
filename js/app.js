@@ -784,6 +784,7 @@ function selectedItem() { return byId(state.selId); }
 
 function selectItem(id) {
   state.selId = id;
+  touch.classList.toggle('grab', !!id);
   renderSubList(); renderTitleList(); renderStickerList();
   syncSubEditor(); syncTitleEditor(); syncStickerEditor(); syncStylePanel();
   render();
@@ -1014,7 +1015,7 @@ touch.addEventListener('pointerdown', (e) => {
   if (e.pointerType === 'mouse' && e.button !== 0) return;
   const p = stagePoint(e);
   const hit = hitTest(p.x, p.y);
-  if (!hit) { state.selId = null; syncStylePanel(); syncSubEditor(); syncTitleEditor(); syncStickerEditor(); render(); return; }
+  if (!hit) { state.selId = null; touch.classList.remove('grab'); syncStylePanel(); syncSubEditor(); syncTitleEditor(); syncStickerEditor(); render(); return; }
   if (state.selId !== hit.id) selectItem(hit.id);
   if (nearHandle(hit, p)) {
     drag = { mode: 'resize', id: hit.id, p0: p, w0: hit.kind === 'stk' ? hit.w : hit.size, isStk: hit.kind === 'stk' };

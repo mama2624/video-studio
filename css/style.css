@@ -111,7 +111,7 @@ b{font-weight:700}
   border-radius:16px;
   overflow:hidden;
   box-shadow:0 10px 30px rgba(50,35,20,.22), 0 0 0 1px rgba(60,44,28,.12);
-  touch-action:none;
+  touch-action:pan-y;          /* 아무것도 선택하지 않았을 때는 화면 스크롤 허용 */
   user-select:none;
 }
 .stage[data-aspect="landscape"]{
@@ -131,7 +131,8 @@ b{font-weight:700}
   letter-spacing:.2px;white-space:nowrap;
 }
 
-.touch{position:absolute;inset:0;cursor:grab;touch-action:none}
+.touch{position:absolute;inset:0;cursor:grab;touch-action:pan-y}
+.touch.grab{touch-action:none}   /* 항목을 선택한 동안은 드래그 전용 */
 .touch.grabbing{cursor:grabbing}
 
 .empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;transition:opacity .2s}
