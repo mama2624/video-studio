@@ -282,6 +282,23 @@ input[type=color]{
 .hint.warn{background:#fdf1ee;border-left:3px solid var(--danger);padding:7px 9px;border-radius:0 8px 8px 0;color:#8a4038;margin-top:6px}
 
 /* 글 자동 세팅 미리보기 */
+.mode-pick{display:grid;gap:6px;margin:2px 0 11px}
+.modebtn{
+  display:flex;flex-direction:column;align-items:flex-start;gap:1px;text-align:left;
+  border:1px solid var(--line2);background:#fff;border-radius:11px;padding:8px 11px;cursor:pointer;
+  font-family:inherit;color:var(--ink);box-shadow:0 1px 2px rgba(58,44,30,.04);
+}
+.modebtn b{font-size:13px;letter-spacing:-.1px}
+.modebtn em{font-style:normal;font-size:11px;line-height:1.45;color:var(--ink3)}
+.modebtn.on{border-color:var(--accent);background:#fff8f3;box-shadow:0 0 0 1px var(--accent) inset}
+.modebtn.on em{color:#a3461f}
+.f15{border:1px solid var(--line);border-radius:11px;background:#fbf7ef;padding:9px 11px;margin:0 0 11px}
+.f15-list{margin:0;padding:0;list-style:none;display:grid;gap:5px;font-size:12px;color:#4b3a29}
+.f15-list li{display:flex;gap:6px;align-items:flex-start;line-height:1.45}
+.f15-list .fx-t{flex:0 0 auto;font-size:9.5px;font-weight:800;color:#fff;background:var(--ink2);padding:2px 5px;border-radius:5px;font-variant-numeric:tabular-nums}
+.f15-list .fx-g{flex:0 0 auto;font-weight:800;color:var(--accent-d);font-size:11px}
+.f15-note{margin:8px 0 0;font-size:11px;line-height:1.55;color:#7a6550}
+.f15-note b{color:#5a4630}
 .auto-preview{border:1px solid var(--line);border-radius:11px;background:#fbf7ef;padding:9px 10px;margin-top:4px}
 .ap-head{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--ink2);margin-bottom:6px}
 .ap-head strong{font-size:12.5px;color:var(--ink)}
@@ -289,6 +306,12 @@ input[type=color]{
 .ap-list li{margin-bottom:4px;padding-right:4px}
 .ap-list .ap-empty{list-style:none;margin-left:-18px;color:var(--ink3);font-size:12px}
 .ap-list .ap-t{color:var(--ink3);font-size:10.5px;font-variant-numeric:tabular-nums;margin-right:4px}
+.ap-list .ap-tx{display:block;margin-top:2px}
+.rtag{font-size:9.5px;font-weight:800;color:#fff;background:var(--gold);padding:2px 5px;border-radius:5px;flex:0 0 auto;letter-spacing:.2px;margin-right:4px}
+.rtag.rt-hook{background:#c25a33}
+.rtag.rt-feat{background:#a1743a}
+.rtag.rt-use{background:#2e7d62}
+.rtag.rt-out{background:#7d5a9e}
 .tag{font-size:10.5px;font-weight:700;padding:2px 7px;border-radius:6px;background:#efe6d6;color:#75643f}
 .tag.warn{background:#fbe3de;color:#a03a2c}
 

@@ -819,7 +819,8 @@ function renderSubList() {
   subs.forEach((it, i) => {
     const row = document.createElement('div');
     row.className = 'row' + (it.id === state.selId ? ' on' : '');
-    row.innerHTML = `<span class="t">${fmtShort(it.start)}~${fmtShort(it.end)}</span>
+    const tag = it.roleTag ? `<span class="rtag rt-${esc(it.role)}">${esc(it.roleTag)}</span>` : '';
+    row.innerHTML = `<span class="t">${fmtShort(it.start)}~${fmtShort(it.end)}</span>${tag}
       <span class="tx">${esc(String(it.text).replace(/\n/g, ' ') || '(빈 자막)')}</span>
       <button class="del" title="삭제" data-del="${it.id}">✕</button>`;
     row.addEventListener('click', (e) => {
@@ -901,6 +902,14 @@ function syncSubEditor() {
   $('#subXVal').textContent = Math.round(it.x * 100) + '%';
   $('#subY').value = (it.y * 100).toFixed(1);
   $('#subYVal').textContent = Math.round(it.y * 100) + '%';
+  const rh = $('#subRoleHint');
+  if (rh) {
+    if (it.f15 && MODE15[it.f15]) {
+      rh.hidden = false;
+      rh.innerHTML = `<b>${esc(MODE15[it.f15].name)} 4단 · [${esc(it.roleTag || '')}] ${esc(it.roleName || '')}</b> 구간입니다. ` +
+        '이 라벨은 편집 목록에만 보이고 영상 자막에는 들어가지 않습니다.';
+    } else rh.hidden = true;
+  }
 }
 function syncTitleEditor() {
   const it = selectedItem();
@@ -1276,10 +1285,255 @@ function computeAutoSegments(body, countOpt, maxLen) {
   });
 }
 
+/* ---------------------------------------------------------
+   9-c-2. 15초 4단 공식 (쇼핑형 / 생활정보형)
+   0~3초 후킹 · 3~7초 특징·기준 · 7~11초 사용·따라하기 · 11~15초 마무리·CTA
+   --------------------------------------------------------- */
+const MODE15 = {
+  shopping: {
+    key: 'shopping',
+    name: '🛍️ 쇼핑 15초',
+    cta: '자세한 제품 정보 확인하세요',
+    roles: [
+      { key: 'hook', tag: '후킹', name: '고민 후킹', s: 0, e: 3, max: 17, win: [0, 0.4] },
+      { key: 'feat', tag: '특징', name: '제품 특징', s: 3, e: 7, max: 17, win: [0, 0.75] },
+      { key: 'use', tag: '사용', name: '실제 사용', s: 7, e: 11, max: 17, win: [0.1, 0.95] },
+      { key: 'out', tag: '마무리', name: '마무리·구매 유도', s: 11, e: 15, max: 14, win: [0.4, 1] },
+    ],
+  },
+  life: {
+    key: 'life',
+    name: '💡 생활정보 15초',
+    cta: '자세한 내용은 프로필·고정댓글 확인!',
+    roles: [
+      { key: 'hook', tag: '후킹', name: '공감 후킹', s: 0, e: 3, max: 17, win: [0, 0.4] },
+      { key: 'feat', tag: '기준', name: '핵심 비교·기준', s: 3, e: 7, max: 17, win: [0, 0.8] },
+      { key: 'use', tag: '따라하기', name: '실전 따라 하기', s: 7, e: 11, max: 17, win: [0.1, 0.95] },
+      { key: 'out', tag: '마무리', name: '마무리·블로그 유도', s: 11, e: 15, max: 14, win: [0.4, 1] },
+    ],
+  },
+};
+
+/* 구간 역할별로 잘 어울리는 말투·단서 */
+const ROLE_WORDS = {
+  shopping: {
+    hook: ['고민', '힘들', '불편', '스트레스', '걱정', '답답', '짜증', '포기', '혹시', '요즘', '매일', '아침', '거울', '늘었', '싫', '번거', '귀찮', '어렵', '모르', '실패', '후회', '드디어', '문제', '왜'],
+    feat: ['특징', '성분', '재질', '사양', '무게', '크기', '용량', '가격', '디자인', '장점', '차이', '비교', '가볍', '튼튼', '부드', '촉촉', '보습', '흡수', '항균', '세척', '분리', '접이', '간편', '전용', '정품', '겹', '중량', '소재', '색상'],
+    use: ['넣고', '바르', '누르', '돌리', '데우', '섞', '붙이', '떼어', '닦', '씻', '말리', '접어', '펴', '올리', '내리', '당기', '밀어', '잡', '열고', '닫고', '방법', '순서', '먼저', '그다음', '마지막', '한 번', '이렇게', '사용법', '따라'],
+    out: ['확인', '구매', '정보', '링크', '프로필', '댓글', '저장', '공유', '구독', '문의', '자세', '추천', '지금', '놓치', '할인', '혜택', '배송', '정리'],
+  },
+  life: {
+    hook: ['혹시', '왜', '요즘', '매일', '아침', '저녁', '늘', '모르', '궁금', '헷갈', '정말', '사실', '불편', '걱정', '놓치', '이거', '이런', '그런', '알고', '까요', '나요', '셨', '많이', '대부분'],
+    feat: ['기준', '비교', '차이', '정도', '경우', '시간', '개월', '나이', '수치', '권장', '이상', '이하', '미만', '평균', '정상', '주의', '구분', '보다', '크게', '작게', '늘었', '줄었', '높', '낮'],
+    use: ['따라', '먼저', '그다음', '마지막', '순서', '방법', '체크', '확인', '준비', '기록', '적어', '정리', '바꾸', '줄이', '늘리', '시작', '이렇게', '하루'],
+    out: ['프로필', '고정댓글', '댓글', '블로그', '자세', '더 알', '확인', '저장', '공유', '구독', '이웃', '링크', '정리', '참고', '도움', '다음'],
+  },
+};
+
+/* 본문이 짧아 역할에 맞는 문장을 못 찾았을 때 쓰는 중립 문구(제품 성능 주장 없음) */
+const ROLE_FALLBACK = {
+  hook: '혹시 이런 고민 있으셨죠?',
+  feat: '핵심 포인트만 짚었습니다',
+  use: '이 순서대로 해 보세요',
+};
+
+const F15_CTA_WORDS = /(확인|프로필|고정댓글|댓글|링크|자세한|자세히|구매|판매|문의|저장|공유|구독|이웃)/;
+
+/* 본문 → 자막 후보(절·문장 단위). 문장은 통째로, 길면 절 단위로 나눈다 */
+const F15_CLAUSE = /([,，、])\s*|(고|서|면|니까|지만|는데|다가|려고|도록|거든요|는데요|잖아요|더라고요|습니다|세요|나요|죠|어요|해요|예요|이에요)\s+/g;
+
+function f15Units(body, maxLen) {
+  const text = autoClean(body);
+  const out = [];
+  const seen = new Set();
+  const push = (s) => {
+    s = s.trim().replace(/^[,，、·]+/, '').replace(/[\s,，、]+$/, '');
+    if (s.length < 4 || seen.has(s)) return;
+    seen.add(s);
+    out.push(s);
+  };
+  for (const raw of text.split('\n')) {
+    const line = raw.replace(/^[\s>*#•·‣▶■□○●\-–—]+/, '').replace(/^\d{1,2}[).]\s*/, '').trim();
+    if (!line) continue;
+    if (/^(구독|좋아요|공감|댓글|이웃|카카오|문의|광고|Copyright|ⓒ|출처|사진|이미지)/i.test(line)) continue;
+    const sents = line.match(/[^.!?。？！]+[.!?。？！]*/g) || [line];
+    for (const raw2 of sents) {
+      const sent = raw2.replace(/[.。]+$/, '').replace(/[\s,，、]+$/, '').trim();
+      if (!sent || sent.length < 4) continue;
+      if (sent.length >= 10) push(sent);           // 문장 통째 후보(질문·짧은 문장은 이대로 자막이 된다)
+      if (sent.length <= maxLen) continue;
+      for (const p of sent.replace(F15_CLAUSE, (m, comma, word) => (comma ? '|' : word + '|')).split('|')) {
+        const piece = p.trim();
+        if (!piece) continue;
+        if (piece.length <= maxLen) { push(piece); continue; }
+        let buf = '';
+        for (const w of piece.split(/\s+/)) {
+          if (buf && buf.length + 1 + w.length > maxLen) { push(buf); buf = w; }
+          else buf = buf ? buf + ' ' + w : w;
+        }
+        if (buf) push(buf);
+      }
+    }
+  }
+  return out;
+}
+
+const F15_IMPERATIVE = /(하세요|해 보세요|해보세요|보세요|두세요|주세요|바르세요|하십시오|따라 하|세요)[.!?]?$/;
+const F15_DECLARATIVE = /(입니다|습니다|이에요|예요|인데요|더라고요|거든요)[.!?]?$/;
+
+function f15RoleCfg(modeKey, role) {
+  const m = MODE15[modeKey];
+  return (m && m.roles.find(r => r.key === role)) || { max: 17, win: [0, 1] };
+}
+
+function f15Score(unit, role, idx, n, modeKey) {
+  const cfg = f15RoleCfg(modeKey, role);
+  const words = (ROLE_WORDS[modeKey] || {})[role] || [];
+  let sc = 0;
+  for (const w of words) if (unit.indexOf(w) >= 0) sc += 2.2;
+  const imperative = F15_IMPERATIVE.test(unit);
+  if (role === 'hook' && /[?？]/.test(unit)) sc += 2.4;
+  if (role === 'hook' && /^(저는|제가|혹시|요즘|이거|이것|우리)/.test(unit)) sc += 1.4;
+  if (role === 'feat' && /\d/.test(unit)) sc += 1.8;
+  if (role === 'feat' && /(%|원|cm|mm|㎜|kg|ml|배|겹|개월|시간)/.test(unit)) sc += 1.2;
+  if (role === 'feat' && F15_DECLARATIVE.test(unit)) sc += 1.5;      // 설명·특징은 서술형
+  if (role === 'use' && imperative) sc += 3;                        // 사용·따라하기는 하세요 말투
+  if (role === 'use' && /^(먼저|그다음|다음|마지막|첫째|둘째|셋째|이렇게|바로)/.test(unit)) sc += 1.5;
+  if (role === 'use' && /\d/.test(unit)) sc += 1.2;
+  if ((role === 'feat' || role === 'use') && unit.length >= 10 && unit.length <= cfg.max + 4) sc += 0.5;
+  if (role === 'out' && /(추천|정리|도움|참고|전체|다음 편)/.test(unit)) sc += 1;
+  if (role !== 'use' && role !== 'out' && imperative) sc -= 2.5;    // 후킹·특징 칸에 명령문은 어색
+  const pos = n > 1 ? idx / (n - 1) : 0;
+  if (role === 'hook') sc += (1 - pos) * 2;
+  if (role === 'out') sc += pos * 2;
+  if (role === 'feat') sc += (1 - Math.abs(pos - 0.3)) * 0.8;
+  if (role === 'use') sc += (1 - Math.abs(pos - 0.6)) * 0.8;
+  // 자막 1~2줄에 담기 좋은 길이인지
+  if (unit.length >= 6 && unit.length <= cfg.max) sc += 1.2;
+  else if (unit.length > cfg.max * 2.2) sc -= 1.4;
+  if (/[?？!]$/.test(unit)) sc += 0.6;
+  return sc;
+}
+
+/* 두 줄로 나눌 자리: 쉼표·절 경계를 우선하고, 없으면 길이 균형 */
+function f15SplitPoint(s, max) {
+  const mid = s.length / 2;
+  const lim = max + 4;
+  let best = -1, bestSc = -1e9;
+  for (let i = 1; i < s.length - 1; i++) {
+    if (s[i] !== ' ') continue;
+    const a = s.slice(0, i), b = s.slice(i + 1);
+    if (!a || !b || a.length > lim || b.length > lim) continue;
+    let sc = 0;
+    if (/[,，、]$/.test(a)) sc += 2;
+    if (/(고|서|면|까|요|다|죠|며|지만|는데|니까|니다|세요)$/.test(a)) sc += 1.2;
+    if (/(에|의|과|와|를|을|은|는|이|가|로|만)$/.test(a)) sc -= 1.5;   // 조사·관형형에서 끊으면 어색
+    sc -= Math.abs(a.length - mid) / 4;
+    if (sc > bestSc) { bestSc = sc; best = i; }
+  }
+  return best;
+}
+
+function f15LineClean(s) {
+  return String(s).replace(/[\s,，、;]+$/, '').replace(/^[,，、\s]+/, '').trim();
+}
+
+/* 자막 1~2줄로 다듬기 — 짧으면 한 줄, 길면 어절 경계에서 균형 있게 두 줄로 나눈다 */
+function f15Lines4(unit, cfg) {
+  let s = String(unit).replace(/[.。]+$/, '').replace(/[\s,，、]+$/, '').trim();
+  if (!s) return [];
+  if (s.length <= cfg.max + 1) return [f15LineClean(s)];
+  if (s.length <= cfg.max * 2 + 4) {
+    const best = f15SplitPoint(s, cfg.max);
+    if (best > 0) return [f15LineClean(s.slice(0, best)), f15LineClean(s.slice(best + 1))];
+  }
+  const cut = s.slice(0, cfg.max);
+  const sp = cut.lastIndexOf(' ');
+  return [f15LineClean(sp >= cfg.max * 0.5 ? cut.slice(0, sp) : cut)];
+}
+
+/* 역할에 가장 어울리는 미사용 문장 하나 (본문 순서를 크게 벗어나지 않도록 구간 창을 둔다) */
+function f15Pick(units, used, picked, role, cfg, modeKey) {
+  const n = units.length;
+  const lo = Math.floor(n * cfg.win[0]);
+  const hi = Math.max(lo, Math.ceil(n * cfg.win[1]) - 1);
+  const all = [];
+  units.forEach((u, i) => { if (!used.has(i)) all.push({ i, u, sc: f15Score(u, role, i, n, modeKey) }); });
+  if (!all.length) return null;
+  for (let i = all.length - 1; i >= 0; i--) {
+    const u = all[i].u;
+    if (picked.some(t => t.indexOf(u) >= 0 || u.indexOf(t) >= 0)) all.splice(i, 1);
+  }
+  if (!all.length) return null;
+  const win = all.filter(c => c.i >= lo && c.i <= hi);
+  const pool = win.length ? win : all;
+  pool.sort((a, b) => (b.sc - a.sc) || (role === 'out' ? b.i - a.i : a.i - b.i));
+  return pool[0];
+}
+
+function f15Lines(units, used, picked, cfg, modeKey, mode) {
+  const pick = f15Pick(units, used, picked, cfg.key, cfg, modeKey);
+  if (!pick) return cfg.key === 'out' ? [mode.cta] : [];
+  used.add(pick.i);
+  picked.push(pick.u);
+  let lines = f15Lines4(pick.u, cfg);
+  if (cfg.key === 'out') {
+    // 본문 끝이 이미 유도 문구면 자동 CTA만 남겨 중복을 피한다
+    if (!lines.length || lines[0].length < 5 || F15_CTA_WORDS.test(pick.u)) lines = [];
+    else if (lines.length > 1) lines = [lines[0]];
+    lines.push(mode.cta);
+  }
+  return lines;
+}
+
+/* 15초 기준 시간표. 영상 길이가 다르면 15초 비율(3:4:4:4)로 배분한다 */
+function f15Timing(total) {
+  const base = [0, 3, 7, 11, 15];
+  if (!total) return { b: base.slice(), kind: 'none' };
+  const t = Math.round(total * 10) / 10;
+  if (Math.abs(total - 15) <= 1.0) {
+    return { b: [0, Math.min(3, t), Math.min(7, t), Math.min(11, t), t], kind: 'near' };
+  }
+  const b = base.map(x => Math.round((x / 15) * t * 10) / 10);
+  b[0] = 0; b[4] = t;
+  for (let i = 1; i < b.length; i++) if (b[i] <= b[i - 1]) b[i] = Math.round((b[i - 1] + 0.3) * 10) / 10;
+  return { b, kind: 'scaled' };
+}
+
+function f15Note(total) {
+  if (!total) return '영상이 아직 없어 <b>0~15초</b> 기준으로 만듭니다. 사진·영상을 올린 뒤 다시 적용하면 실제 길이에 맞춰집니다.';
+  const t = total.toFixed(1);
+  if (Math.abs(total - 15) <= 1.0) return `현재 영상 <b>${t}초</b> — 15초 4단 비율(3·4·4·4초)에 맞춰 배치합니다.`;
+  return `현재 영상 <b>${t}초</b> — 15초 비율(3·4·4·4초)로 나눠 배분했습니다. 4단을 정확히 쓰려면 타임라인을 <b>15초</b>로 맞춰 주세요.`;
+}
+
+function computeFormulaSegments(body, modeKey) {
+  const mode = MODE15[modeKey];
+  if (!mode) return { segs: [], bounds: [0, 3, 7, 11, 15], kind: 'none' };
+  const units = f15Units(body, 24);
+  const used = new Set();
+  const picked = [];
+  const { b, kind } = f15Timing(totalDuration());
+  const segs = mode.roles.map((cfg, i) => {
+    let lines = f15Lines(units, used, picked, cfg, modeKey, mode);
+    if (!lines.length) lines = [ROLE_FALLBACK[cfg.key] || ''];
+    return {
+      role: cfg.key, tag: cfg.tag, name: cfg.name, mode: modeKey,
+      text: lines.filter(Boolean).join('\n'),
+      start: b[i], end: b[i + 1],
+      formula: `${cfg.s}~${cfg.e}`,
+    };
+  });
+  return { segs, bounds: b, kind };
+}
+
+let autoMode = 'basic';
+
 function readAutoForm() {
   return {
     title: autoClean($('#autoTitleIn').value).split('\n')[0].slice(0, 60),
     body: $('#autoBody').value,
+    mode: autoMode,
     count: parseInt($('#autoCount').value, 10) || 0,
     len: parseInt($('#autoLen').value, 10) || 28,
   };
@@ -1288,9 +1542,25 @@ function readAutoForm() {
 let autoPreviewTimer = null;
 function renderAutoPreview() {
   const f = readAutoForm();
+  const list = $('#autoList');
+  if (f.mode !== 'basic') {
+    syncAutoModeUI();
+    const res = f.body.trim().length > 10 ? computeFormulaSegments(f.body, f.mode) : { segs: [] };
+    const segs = res.segs || [];
+    $('#autoCount2').textContent = segs.length ? '4구간 · ' + MODE15[f.mode].name.replace(/\S+ /, '') : '0구간';
+    if (!segs.length) {
+      list.innerHTML = '<li class="ap-empty">본문을 붙여넣으면 4구간이 여기에 보입니다</li>';
+      return;
+    }
+    list.innerHTML = segs.map(s =>
+      `<li><span class="ap-t">${s.start.toFixed(1)}~${s.end.toFixed(1)}초</span>` +
+      `<span class="rtag rt-${s.role}">${esc(s.tag)}</span>` +
+      `<span class="ap-tx">${esc(s.text).replace(/\n/g, '<br>')}</span></li>`).join('');
+    return;
+  }
+  syncAutoModeUI();
   const segs = f.body.trim().length > 10 ? computeAutoSegments(f.body, f.count, f.len) : [];
   $('#autoCount2').textContent = segs.length ? segs.length + '개' : '0개';
-  const list = $('#autoList');
   if (!segs.length) {
     list.innerHTML = '<li class="ap-empty">본문을 붙여넣으면 여기에 구간이 보입니다</li>';
     return;
@@ -1303,14 +1573,40 @@ function scheduleAutoPreview() {
   autoPreviewTimer = setTimeout(renderAutoPreview, 220);
 }
 
+function syncAutoModeUI() {
+  const is15 = autoMode !== 'basic';
+  const mode = MODE15[autoMode];
+  const optRow = $('#autoOptRow');
+  if (optRow) optRow.hidden = is15;
+  const box = $('#autoFormula');
+  if (box) box.hidden = !is15;
+  const btn = $('#btnAutoApply');
+  if (btn) btn.textContent = is15 ? '4단 자막 적용' : '자동 분할 적용';
+  $$('#autoModes .modebtn').forEach(b => b.classList.toggle('on', b.dataset.mode === autoMode));
+  if (!is15) return;
+  const list = $('#autoF15List');
+  if (list) {
+    list.innerHTML = mode.roles.map(r =>
+      `<li><span class="fx-t">${r.s}~${r.e}초</span><span class="fx-g">[${esc(r.tag)}]</span>` +
+      `<span class="fx-n">${esc(r.name)}${r.key === 'out' ? ' — CTA “' + esc(mode.cta) + '”' : ''}</span></li>`).join('');
+  }
+  const note = $('#autoF15Note');
+  if (note) {
+    note.innerHTML = f15Note(totalDuration()) +
+      '<br>구간 역할([후킹]·[특징] 같은 라벨)은 <b>편집 목록에만</b> 표시되고, 영상 자막에는 깔끔한 문장만 들어갑니다.';
+  }
+}
+
 function openAutoModal() {
   $('#autoModal').hidden = false;
+  syncAutoModeUI();
   renderAutoPreview();
   setTimeout(() => { try { $('#autoBody').focus(); } catch (e) { } }, 80);
 }
 
 function applyAuto() {
   const f = readAutoForm();
+  if (f.mode !== 'basic') { applyFormula(f); return; }
   if (autoClean(f.body).length < 20) { toast('본문을 20자 이상 붙여넣어 주세요'); return; }
   const segs = computeAutoSegments(f.body, f.count, f.len);
   if (!segs.length) { toast('자막으로 나눌 문장을 찾지 못했습니다'); return; }
@@ -1354,6 +1650,51 @@ function applyAuto() {
   } else {
     toast(`자막 ${subs.length}개${$('#autoTitleOn').checked ? ' · 타이틀 1개' : ''}를 채웠습니다`, 3000);
   }
+}
+
+function applyFormula(f) {
+  if (autoClean(f.body).length < 20) { toast('본문을 20자 이상 붙여넣어 주세요'); return; }
+  const mode = MODE15[f.mode];
+  const res = computeFormulaSegments(f.body, f.mode);
+  const segs = res.segs;
+  if (!segs.length || !segs.some(s => s.text)) { toast('자막으로 나눌 문장을 찾지 못했습니다'); return; }
+
+  if ($('#autoReplace').checked) {
+    state.items = state.items.filter(i => i.kind !== 'sub');
+  }
+  const base = Object.assign({}, state.defSt);
+  const y = state.aspect === 'portrait' ? 0.78 : 0.82;
+  const subs = segs.map(s => Object.assign({}, base, {
+    id: uid(), kind: 'sub', text: s.text, start: s.start, end: s.end,
+    x: 0.5, y, maxW: 0.86,
+    size: state.aspect === 'portrait' ? 0.105 : 0.075,
+    role: s.role, roleTag: s.tag, roleName: s.name, f15: f.mode,
+  }));
+  state.items.push(...subs);
+
+  const total = totalDuration() || res.bounds[4] || 15;
+  if ($('#autoTitleOn').checked) {
+    const titleText = f.title || segs[0].text.split('\n')[0];
+    const t = state.items.find(i => i.kind === 'title');
+    if (t) { t.text = titleText; t.start = 0; t.end = total; }
+    else {
+      state.items.push(Object.assign({}, base, {
+        id: uid(), kind: 'title', text: titleText, start: 0, end: total,
+        x: 0.5, y: state.aspect === 'portrait' ? 0.15 : 0.18,
+        size: state.aspect === 'portrait' ? 0.088 : 0.06, maxW: 0.88,
+      }));
+    }
+  }
+
+  $('#autoModal').hidden = true;
+  switchTab('sub');
+  state.t = 0;
+  syncMediaAt(0, false);
+  renderSubList(); renderTitleList(); renderStickerList();
+  state.selId = subs[0] ? subs[0].id : null;
+  syncSubEditor(); syncStylePanel(); syncTitleEditor(); syncStickerEditor();
+  render();
+  toast(`${mode.name} 4단 자막 4개를 채웠습니다 — 후킹·${mode.roles[1].tag}·${mode.roles[2].tag}·마무리`, 4000);
 }
 
 /* ---------------------------------------------------------
@@ -2271,6 +2612,13 @@ function initEvents() {
     el.addEventListener('input', scheduleAutoPreview);
     el.addEventListener('change', scheduleAutoPreview);
   });
+  $('#autoModes').addEventListener('click', (e) => {
+    const b = e.target.closest('.modebtn');
+    if (!b) return;
+    autoMode = b.dataset.mode || 'basic';
+    syncAutoModeUI();
+    renderAutoPreview();
+  });
 
   /* 도움말 */
   $('#btnHelp').addEventListener('click', () => { $('#helpModal').hidden = false; });
@@ -2342,7 +2690,7 @@ function init() {
   // 기본 폰트 미리 로드
   try { document.fonts.load('900 100px "Noto Sans KR"').catch(() => { }); } catch (e) { }
   // 서비스 워커·외부 전송 없음
-  window.__VS = { state, render, totalDuration, seekTo, setAspect, applyAuto, computeAutoSegments, autoUnits, addItemForTest: addTextItem }; // 디버그용
+  window.__VS = { state, render, totalDuration, seekTo, setAspect, applyAuto, computeAutoSegments, autoUnits, computeFormulaSegments, f15Timing, MODE15, getMode: () => autoMode, setMode: (m) => { autoMode = m; syncAutoModeUI(); renderAutoPreview(); }, addItemForTest: addTextItem }; // 디버그용
 }
 
 document.addEventListener('DOMContentLoaded', init);

@@ -14,7 +14,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Do+Hyeon&family=East+Sea+Dokdo&family=Gaegu:wght@400;700&family=Gowun+Dodum&family=Gugi&family=Jua&family=Nanum+Gothic:wght@400;700;800&family=Nanum+Myeongjo:wght@400;700;800&family=Noto+Sans+KR:wght@400;500;700;900&family=Song+Myung&display=swap">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
-<link rel="stylesheet" href="css/style.css?v=1.1.0">
+<link rel="stylesheet" href="css/style.css?v=1.2.0">
 </head>
 <body>
 
@@ -167,6 +167,7 @@
             <button class="btn xs" id="btnDupSub" type="button">복제</button>
             <button class="btn xs danger" id="btnDelSub" type="button">자막 삭제</button>
           </div>
+          <p class="hint tip" id="subRoleHint" hidden></p>
           <p class="hint tip">글꼴·색·외곽선·배경박스는 <b>폰트·디자인</b> 탭에서 바꿉니다.</p>
         </div>
       </div>
@@ -428,13 +429,30 @@
   <div class="modal-bg" data-close></div>
   <div class="modal-card wide" role="dialog" aria-modal="true" aria-labelledby="autoTitleH">
     <h2 id="autoTitleH">📝 글로 자동 세팅</h2>
-    <p class="modal-desc">블로그 <b>제목·본문을 복사해 붙여넣으면</b> 문장·핵심 포인트 단위로 <b>4~8개 구간 자막</b>과 <b>상단 타이틀</b>을 만들고, 영상 길이에 맞춰 시간을 나눠 줍니다.</p>
+    <p class="modal-desc">블로그 <b>제목·본문을 복사해 붙여넣으면</b> 자막과 <b>상단 타이틀</b>을 만들고, 영상 길이에 맞춰 시간을 나눠 줍니다. 아래에서 모드를 고르세요 — <b>기본 자동 분할</b>(4~8개) 또는 <b>15초 4단 공식</b>(쇼핑·생활정보).</p>
     <p class="hint tip">블로그 <b>주소(URL)</b>를 넣는 칸이 아닙니다. 주소는 보안상 앱이 열 수 없어서, 지연님이 본문을 복사해 붙여넣어 주셔야 합니다.</p>
+
+    <div class="mode-pick" id="autoModes" role="group" aria-label="자동 분할 모드">
+      <button class="modebtn on" type="button" data-mode="basic">
+        <b>기본 자동 분할</b><em>본문 흐름대로 4~8개 자막</em>
+      </button>
+      <button class="modebtn" type="button" data-mode="shopping">
+        <b>🛍️ 쇼핑 15초 (4단 공식)</b><em>0~3 고민 후킹 · 3~7 제품 특징 · 7~11 실제 사용 · 11~15 구매유도</em>
+      </button>
+      <button class="modebtn" type="button" data-mode="life">
+        <b>💡 생활정보 15초 (4단 공식)</b><em>0~3 공감 후킹 · 3~7 핵심 비교·기준 · 7~11 실전 따라하기 · 11~15 블로그 유도</em>
+      </button>
+    </div>
+
+    <div class="f15" id="autoFormula" hidden>
+      <ol class="f15-list" id="autoF15List"></ol>
+      <p class="f15-note" id="autoF15Note"></p>
+    </div>
     <label class="fld"><span>제목 <em>선택 — 상단 타이틀이 됩니다</em></span>
       <input type="text" id="autoTitleIn" placeholder="예) 40대 혈압, 이것만 지켜도 달라집니다"></label>
     <label class="fld"><span>본문</span>
       <textarea id="autoBody" rows="7" placeholder="블로그 본문을 그대로 복사해 붙여넣으세요 (소제목·목록 있어도 됩니다)"></textarea></label>
-    <div class="row2">
+    <div class="row2" id="autoOptRow">
       <label class="fld"><span>자막 개수</span>
         <select id="autoCount">
           <option value="0">자동 (4~8개)</option>
@@ -481,7 +499,7 @@
       <li><b>상단 타이틀</b> — 영상 내내 위에 붙는 훅 문구를 넣습니다.</li>
       <li><b>오디오</b> — 원본 소리를 끄거나, <b>🎙️ 내 목소리 녹음</b>·<b>🗣️ 음성 파일</b>로 나레이션을 얹고, <b>BGM</b>을 깝니다. 세 가지가 함께 믹싱되어 저장됩니다.</li>
       <li><b>안전영역</b> — 쇼츠·릴스·클립을 켜면 오른쪽 아이콘과 아래 설명에 가려지는 곳이 표시됩니다. 자막은 그 안쪽에 두세요.</li>
-      <li><b>글로 자동 세팅</b> — 블로그 제목·본문을 복사해 붙여넣고 <b>📝 글 → 자동 자막</b>을 누르면 4~8개 구간 자막과 상단 타이틀이 영상 길이에 맞춰 자동으로 들어갑니다.</li>
+      <li><b>글로 자동 세팅</b> — 블로그 제목·본문을 복사해 붙여넣고 <b>📝 글 → 자동 자막</b>을 누르면 4~8개 구간 자막과 상단 타이틀이 영상 길이에 맞춰 자동으로 들어갑니다. 초록색 <b>🛍️ 쇼핑 15초</b>·<b>💡 생활정보 15초</b>를 고르면 <b>0~3 · 3~7 · 7~11 · 11~15초</b> 4단 공식으로 자막이 배치되고, 편집 목록에 [후킹]·[특징]·[마무리] 같은 구간 라벨이 표시됩니다(영상에는 라벨이 나오지 않습니다).</li>
       <li><b>화면 비율</b> — <b>9:16 세로</b>(쇼츠·릴스·클립)와 <b>16:9 가로</b>(유튜브 일반 영상)를 버튼 하나로 바꿉니다. 가로에서는 안전영역 안내가 잠깁니다.</li>
       <li><b>MP4 저장</b> — 저장을 누르면 실제 재생되며 녹화됩니다. 끝나면 파일이 자동으로 내려받아집니다.</li>
     </ol>
@@ -497,7 +515,7 @@
 
 <div class="toast" id="toast" hidden></div>
 
-<script src="js/mp4-muxer.js?v=1.1.0"></script>
-<script src="js/app.js?v=1.1.0"></script>
+<script src="js/mp4-muxer.js?v=1.2.0"></script>
+<script src="js/app.js?v=1.2.0"></script>
 </body>
 </html>
