@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<title>진진 숏폼 편집기 · 9:16 영상 편집</title>
+<meta name="description" content="지연님 전용 9:16 숏폼 영상 편집기 — 사진·영상 올리고, 구간 자막·상단 타이틀·스티커·BGM을 얹어 MP4로 저장. 설치·로그인·서버 없이 브라우저에서만 동작합니다.">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#2a2118">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="진진 숏폼">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8E%AC%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Do+Hyeon&family=East+Sea+Dokdo&family=Gaegu:wght@400;700&family=Gowun+Dodum&family=Gugi&family=Jua&family=Nanum+Gothic:wght@400;700;800&family=Nanum+Myeongjo:wght@400;700;800&family=Noto+Sans+KR:wght@400;500;700;900&family=Song+Myung&display=swap">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="stylesheet" href="css/style.css?v=1.0.0">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="brand-mark" aria-hidden="true">🎬</span>
+    <div class="brand-txt">
+      <strong>진진 숏폼 편집기</strong>
+      <span class="brand-sub">쇼츠 · 릴스 · 클립 · 유튜브</span>
+    </div>
+  </div>
+  <div class="top-actions">
+    <button class="btn primary sm" id="btnAdd" type="button">＋ 사진·영상</button>
+    <button class="btn ghost sm" id="btnHelp" type="button" aria-label="도움말">도움말</button>
+  </div>
+  <input type="file" id="fileMedia" accept="video/*,image/*" multiple hidden>
+</header>
+
+<main class="app">
+
+  <!-- ============ 왼쪽: 미리보기 / 재생바 / 타임라인 ============ -->
+  <section class="stage-col">
+
+    <div class="stage-block">
+      <div class="stage-top">
+        <div class="aspectgroup">
+          <span class="guide-label">비율</span>
+          <div class="chips" id="aspectChips">
+            <button class="chip on" data-aspect="portrait" type="button">9:16 세로</button>
+            <button class="chip" data-aspect="landscape" type="button">16:9 가로</button>
+          </div>
+        </div>
+        <button class="btn auto sm js-auto" type="button">📝 글 → 자동 자막</button>
+      </div>
+      <div class="stage-shell">
+        <div class="stage" id="stageBox">
+          <canvas id="stage" width="1080" height="1920" aria-label="9:16 영상 미리보기"></canvas>
+          <div class="guides" id="guides" aria-hidden="true"></div>
+          <div class="touch" id="touch"></div>
+        <div class="empty" id="emptyHint">
+            <div class="empty-in">
+              <span class="empty-ico">🎞️</span>
+              <strong>사진이나 영상을 올려 주세요</strong>
+              <span>＋ 사진·영상 버튼을 누르거나<br>파일을 이 화면으로 끌어다 놓으면 됩니다</span>
+            </div>
+          </div>
+          <div class="busy" id="busy" hidden><span class="spinner"></span><em id="busyMsg">처리 중…</em></div>
+        </div>
+      </div>
+
+      <div class="guide-row">
+        <span class="guide-label">안전영역</span>
+        <div class="chips" id="guideChips">
+          <button class="chip on" data-guide="none" type="button">없음</button>
+          <button class="chip" data-guide="shorts" type="button">쇼츠</button>
+          <button class="chip" data-guide="reels" type="button">릴스</button>
+          <button class="chip" data-guide="clip" type="button">네이버 클립</button>
+          <button class="chip" data-guide="all" type="button">전체</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="transport card">
+      <button class="playbtn" id="btnPlay" type="button" aria-label="재생">▶</button>
+      <div class="timecode"><b id="tNow">0:00.0</b><span>/</span><span id="tTotal">0:00.0</span></div>
+      <input class="scrub" id="scrub" type="range" min="0" max="1000" value="0" step="1" aria-label="재생 위치">
+      <button class="btn export" id="btnExport" type="button"><span class="exp-ico">⤓</span> MP4 저장</button>
+    </div>
+
+    <div class="exportbar" id="exportBar" hidden>
+      <div class="ebar"><i id="exportFill"></i></div>
+      <div class="emsg" id="exportMsg">준비 중…</div>
+      <a class="btn sm" id="exportDownload" hidden download>다시 내려받기</a>
+    </div>
+
+    <div class="timeline card">
+      <div class="tl-head">
+        <strong>타임라인</strong>
+        <span class="tl-hint" id="tlHint">사진·영상을 올리면 클립이 생깁니다</span>
+      </div>
+      <div class="strip" id="strip"></div>
+      <div class="tl-tools" id="clipTools" hidden>
+        <div class="tl-tools-row">
+          <button class="btn xs" id="btnSplit" type="button">✂ 분할</button>
+          <button class="btn xs" id="btnMoveL" type="button">◀ 앞으로</button>
+          <button class="btn xs" id="btnMoveR" type="button">뒤로 ▶</button>
+          <button class="btn xs danger" id="btnDelClip" type="button">삭제</button>
+        </div>
+        <div class="tl-tools-row">
+          <label class="fld inline"><span>시작점</span><input type="number" id="clipIn" step="0.1" min="0"></label>
+          <label class="fld inline"><span>길이</span><input type="number" id="clipLen" step="0.1" min="0.2"></label>
+          <span class="tl-src" id="clipSrc"></span>
+        </div>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- ============ 오른쪽: 5개 탭 패널 ============ -->
+  <section class="panel-col card">
+    <nav class="tabs" id="tabs">
+      <button class="tab on" data-tab="sub" type="button">구간 자막</button>
+      <button class="tab" data-tab="style" type="button">폰트·디자인</button>
+      <button class="tab" data-tab="sticker" type="button">스티커</button>
+      <button class="tab" data-tab="title" type="button">상단 타이틀</button>
+      <button class="tab" data-tab="audio" type="button">오디오·음성</button>
+    </nav>
+
+    <div class="panels">
+
+      <!-- ---------- 1. 구간 자막 ---------- -->
+      <div class="panel on" data-panel="sub">
+        <div class="p-head">
+          <strong>구간 자막</strong>
+          <button class="btn primary sm" id="btnAddSub" type="button">＋ 자막 추가</button>
+        </div>
+        <p class="hint">재생 위치에 3초 자막이 생깁니다. 미리보기 화면에서 <b>끌어서 위치</b>를 옮기고, 손가락 두 개로 벌려 <b>크기</b>를 조절하세요.</p>
+        <button class="btn auto block js-auto" type="button">📝 붙여넣은 글로 자동 자막·타이틀 만들기</button>
+        <div class="list" id="subList"><div class="list-empty">아직 자막이 없습니다</div></div>
+
+        <div class="editor" id="subEditor" hidden>
+          <label class="fld"><span>자막 내용 <em>줄바꿈 가능</em></span>
+            <textarea id="subText" rows="3" placeholder="예) 오늘 딱 하나만 바꾼다면?"></textarea>
+          </label>
+          <div class="row2">
+            <label class="fld"><span>시작 (초)</span><input type="number" id="subStart" step="0.1" min="0"></label>
+            <label class="fld"><span>끝 (초)</span><input type="number" id="subEnd" step="0.1" min="0"></label>
+          </div>
+          <div class="quick">
+            <button class="btn xs" id="subStartNow" type="button">시작=현재</button>
+            <button class="btn xs" id="subEndNow" type="button">끝=현재</button>
+            <button class="btn xs" id="subLen3" type="button">3초로</button>
+          </div>
+          <label class="fld"><span>글자 크기 <b id="subSizeVal">–</b></span>
+            <input type="range" id="subSize" min="20" max="300" step="1">
+          </label>
+          <label class="fld"><span>가로 위치 <b id="subXVal">–</b></span>
+            <input type="range" id="subX" min="2" max="98" step="0.5">
+          </label>
+          <label class="fld"><span>세로 위치 <b id="subYVal">–</b></span>
+            <input type="range" id="subY" min="2" max="98" step="0.5">
+          </label>
+          <div class="quick">
+            <button class="btn xs" data-subpos="top" type="button">상단</button>
+            <button class="btn xs" data-subpos="mid" type="button">가운데</button>
+            <button class="btn xs" data-subpos="low" type="button">하단</button>
+            <button class="btn xs" data-subpos="safe" type="button">안전 하단</button>
+          </div>
+          <div class="quick">
+            <button class="btn xs" id="btnDupSub" type="button">복제</button>
+            <button class="btn xs danger" id="btnDelSub" type="button">자막 삭제</button>
+          </div>
+          <p class="hint tip">글꼴·색·외곽선·배경박스는 <b>폰트·디자인</b> 탭에서 바꿉니다.</p>
+        </div>
+      </div>
+
+      <!-- ---------- 2. 폰트·디자인 ---------- -->
+      <div class="panel" data-panel="style">
+        <div class="p-head">
+          <strong>폰트·디자인</strong>
+          <span class="tag" id="styleTarget">선택 없음</span>
+        </div>
+        <p class="hint">선택한 자막·타이틀의 글씨 모양을 바꿉니다. 아무것도 선택하지 않으면 <b>새로 만드는 자막의 기본값</b>이 됩니다.</p>
+
+        <label class="fld"><span>글꼴</span>
+          <select id="fontSel">
+            <option value="'Noto Sans KR', sans-serif">노토 산스 — 기본·깔끔</option>
+            <option value="'Pretendard', 'Noto Sans KR', sans-serif">프리텐다드 — 모던</option>
+            <option value="'Jua', 'Noto Sans KR', sans-serif">주아 — 배민 귀여움</option>
+            <option value="'Black Han Sans', 'Noto Sans KR', sans-serif">검은고딕 — 굵은 임팩트</option>
+            <option value="'Do Hyeon', 'Noto Sans KR', sans-serif">도현 — 굵은 제목</option>
+            <option value="'Gowun Dodum', 'Noto Sans KR', sans-serif">고운돋움 — 부드러운 본문</option>
+            <option value="'Nanum Gothic', sans-serif">나눔고딕</option>
+            <option value="'Nanum Myeongjo', serif">나눔명조 — 차분한 명조</option>
+            <option value="'Song Myung', serif">송명 — 감성 명조</option>
+            <option value="'Gugi', 'Noto Sans KR', sans-serif">구기 — 개성 손글씨</option>
+            <option value="'Gaegu', 'Noto Sans KR', sans-serif">개구 — 손글씨</option>
+            <option value="'East Sea Dokdo', 'Noto Sans KR', sans-serif">동해독도 — 붓글씨</option>
+          </select>
+        </label>
+        <div class="font-preview" id="fontPreview">가나다라 ABC 123</div>
+
+        <div class="row2">
+          <label class="fld"><span>굵기</span>
+            <select id="weightSel">
+              <option value="400">보통</option>
+              <option value="500">중간</option>
+              <option value="700">굵게</option>
+              <option value="900">아주 굵게</option>
+            </select>
+          </label>
+          <label class="fld"><span>정렬</span>
+            <select id="alignSel">
+              <option value="center">가운데</option>
+              <option value="left">왼쪽</option>
+              <option value="right">오른쪽</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="row2">
+          <label class="fld"><span>글자색</span>
+            <span class="colorline"><input type="color" id="colorSel"><input type="text" id="colorHex" spellcheck="false" maxlength="7"></span>
+          </label>
+          <label class="fld"><span>외곽선 색</span>
+            <span class="colorline"><input type="color" id="strokeColor"><input type="text" id="strokeHex" spellcheck="false" maxlength="7"></span>
+          </label>
+        </div>
+
+        <label class="fld"><span>외곽선 두께 <b id="strokeVal">–</b></span>
+          <input type="range" id="strokeW" min="0" max="40" step="1">
+        </label>
+
+        <label class="fld switch"><input type="checkbox" id="shadowOn"><span>글자 그림자</span></label>
+
+        <div class="sep"></div>
+
+        <label class="fld"><span>배경박스 색</span>
+          <span class="colorline"><input type="color" id="bgColor"><input type="text" id="bgHex" spellcheck="false" maxlength="7"></span>
+        </label>
+        <label class="fld"><span>배경 진하기 <b id="bgAlphaVal">–</b></span>
+          <input type="range" id="bgAlpha" min="0" max="100" step="1">
+        </label>
+        <label class="fld"><span>배경 둥글기 <b id="bgRadVal">–</b></span>
+          <input type="range" id="bgRadius" min="0" max="50" step="1">
+        </label>
+        <label class="fld"><span>줄 간격 <b id="lineHeightVal">–</b></span>
+          <input type="range" id="lineHeight" min="90" max="200" step="1">
+        </label>
+        <label class="fld"><span>자간 <b id="letterSpVal">–</b></span>
+          <input type="range" id="letterSp" min="-10" max="30" step="1">
+        </label>
+
+        <div class="quick">
+          <button class="btn xs" id="btnApplyAllSub" type="button">모든 자막에 적용</button>
+          <button class="btn xs" id="btnApplyAllTitle" type="button">모든 타이틀에 적용</button>
+        </div>
+
+        <div class="presets">
+          <span class="presets-label">빠른 스타일</span>
+          <button class="preset" data-preset="clean" type="button">깔끔 흰색</button>
+          <button class="preset" data-preset="bold" type="button">굵은 노랑</button>
+          <button class="preset" data-preset="box" type="button">검정 박스</button>
+          <button class="preset" data-preset="mint" type="button">민트 강조</button>
+        </div>
+      </div>
+
+      <!-- ---------- 3. 스티커 ---------- -->
+      <div class="panel" data-panel="sticker">
+        <div class="p-head">
+          <strong>스티커</strong>
+          <button class="btn primary sm" id="btnAddSticker" type="button">＋ PNG·JPG 올리기</button>
+        </div>
+        <input type="file" id="fileSticker" accept="image/png,image/jpeg,image/webp" multiple hidden>
+        <p class="hint">투명 PNG를 올리면 배경 없이 얹힙니다. 화면에서 끌어 옮기고, <b>두 손가락으로 벌려</b> 크기를 조절하세요.</p>
+        <div class="gallery" id="stickerGallery"></div>
+
+        <div class="list" id="stickerList"><div class="list-empty">아직 스티커가 없습니다</div></div>
+
+        <div class="editor" id="stickerEditor" hidden>
+          <label class="fld"><span>크기 <b id="stkSizeVal">–</b></span>
+            <input type="range" id="stkSize" min="3" max="100" step="1">
+          </label>
+          <label class="fld"><span>회전 <b id="stkRotVal">–</b></span>
+            <input type="range" id="stkRot" min="-180" max="180" step="1">
+          </label>
+          <label class="fld"><span>투명도 <b id="stkOpVal">–</b></span>
+            <input type="range" id="stkOpacity" min="10" max="100" step="1">
+          </label>
+          <div class="row2">
+            <label class="fld"><span>시작 (초)</span><input type="number" id="stkStart" step="0.1" min="0"></label>
+            <label class="fld"><span>끝 (초)</span><input type="number" id="stkEnd" step="0.1" min="0"></label>
+          </div>
+          <div class="quick">
+            <button class="btn xs" id="btnStkFront" type="button">맨 앞으로</button>
+            <button class="btn xs" id="btnStkBack" type="button">맨 뒤로</button>
+            <button class="btn xs" id="btnDupStk" type="button">복제</button>
+            <button class="btn xs danger" id="btnDelStk" type="button">삭제</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ---------- 4. 상단 타이틀 ---------- -->
+      <div class="panel" data-panel="title">
+        <div class="p-head">
+          <strong>상단 타이틀</strong>
+          <button class="btn primary sm" id="btnAddTitle" type="button">＋ 타이틀 추가</button>
+        </div>
+        <p class="hint">영상 내내 맨 위에 붙는 <b>훅 문구</b>입니다. 1~2줄을 권장합니다.</p>
+        <div class="list" id="titleList"><div class="list-empty">아직 타이틀이 없습니다</div></div>
+
+        <div class="editor" id="titleEditor" hidden>
+          <label class="fld"><span>타이틀 문구 <em>줄바꿈 가능</em></span>
+            <textarea id="ttlText" rows="2" placeholder="예) 40대가 꼭 알아야 할 3가지"></textarea>
+          </label>
+          <div class="row2">
+            <label class="fld"><span>시작 (초)</span><input type="number" id="ttlStart" step="0.1" min="0"></label>
+            <label class="fld"><span>끝 (초)</span><input type="number" id="ttlEnd" step="0.1" min="0"></label>
+          </div>
+          <label class="fld"><span>글자 크기 <b id="ttlSizeVal">–</b></span>
+            <input type="range" id="ttlSize" min="20" max="220" step="1">
+          </label>
+          <label class="fld"><span>세로 위치 <b id="ttlYVal">–</b></span>
+            <input type="range" id="ttlY" min="2" max="60" step="0.5">
+          </label>
+          <div class="row2">
+            <label class="fld"><span>글자색</span>
+              <span class="colorline"><input type="color" id="ttlColor"><input type="text" id="ttlHex" spellcheck="false" maxlength="7"></span>
+            </label>
+            <label class="fld"><span>정렬</span>
+              <select id="ttlAlign">
+                <option value="center">가운데</option>
+                <option value="left">왼쪽</option>
+                <option value="right">오른쪽</option>
+              </select>
+            </label>
+          </div>
+          <div class="quick">
+            <button class="btn xs" id="btnDupTtl" type="button">복제</button>
+            <button class="btn xs danger" id="btnDelTtl" type="button">타이틀 삭제</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ---------- 5. 오디오·BGM (원본 · 내 목소리 · BGM) ---------- -->
+      <div class="panel" data-panel="audio">
+
+        <div class="p-head"><strong>① 원본 영상 소리</strong></div>
+        <label class="fld switch"><input type="checkbox" id="srcMute"><span>원본 소리 끄기(무음)</span></label>
+        <label class="fld"><span>원본 소리 음량 <b id="srcVolVal">100%</b></span>
+          <input type="range" id="srcVol" min="0" max="150" step="1">
+        </label>
+        <p class="hint tip" id="audioNote">영상에 소리가 있으면 자동으로 함께 저장됩니다. (브라우저가 소리를 못 읽는 형식이면 무음으로 처리됩니다)</p>
+
+        <div class="sep"></div>
+
+        <div class="p-head">
+          <strong>② 내 목소리 · 나레이션</strong>
+          <div class="p-head-btns">
+            <button class="btn rec sm" id="btnRec" type="button">🎙️ 내 목소리 녹음</button>
+            <button class="btn sm" id="btnAddVoice" type="button">🗣️ 음성 파일</button>
+          </div>
+        </div>
+        <input type="file" id="fileVoice" accept="audio/*,.mp3,.m4a,.wav,.aac,.ogg" multiple hidden>
+        <p class="hint">녹음한 목소리와 음성 파일은 <b>BGM과 따로</b> 쌓입니다. 원본 영상 소리 · 내 목소리 · 배경음악이 <b>한꺼번에 믹싱</b>되어 저장됩니다.</p>
+
+        <div class="recdock">
+          <div class="recstate" id="recState">🎙️ 버튼을 누르면 바로 녹음이 시작됩니다. 영상을 재생해 두고 목소리를 얹으면 그 위치부터 들어갑니다.</div>
+          <div class="rectime" id="recTime" hidden><span class="recdot"></span><b id="recClock">0:00</b><em>녹음 중</em></div>
+          <div class="quick">
+            <button class="btn xs danger" id="btnRecStop" type="button" hidden>■ 녹음 끝내기</button>
+            <button class="btn xs" id="btnRecPreview" type="button" hidden>▶ 방금 녹음 듣기</button>
+            <button class="btn xs" id="btnRecCancel" type="button" hidden>버리기</button>
+          </div>
+        </div>
+
+        <div id="voiceList"><div class="list-empty">아직 나레이션이 없습니다</div></div>
+
+        <div class="speak">
+          <div class="p-head"><strong>🔊 대본 미리 듣기</strong><span class="tag warn">저장 안 됨</span></div>
+          <p class="hint warn">브라우저가 읽어 주는 소리는 <b>미리듣기 전용</b>입니다. 영상 파일에 합쳐지지 않으니, 실제 나레이션은 위 <b>🎙️ 내 목소리 녹음</b> 또는 <b>🗣️ 음성 파일</b>로 넣어 주세요.</p>
+          <textarea id="speakText" rows="3" placeholder="나레이션 대본을 붙여넣고 미리 들어보세요"></textarea>
+          <div class="row2">
+            <label class="fld"><span>목소리</span><select id="speakVoice"><option value="">기본</option></select></label>
+            <label class="fld"><span>속도 <b id="speakRateVal">1.0</b></span><input type="range" id="speakRate" min="50" max="180" step="5" value="100"></label>
+          </div>
+          <div class="quick">
+            <button class="btn xs primary" id="btnSpeak" type="button">🔊 미리듣기</button>
+            <button class="btn xs" id="btnSpeakStop" type="button">정지</button>
+          </div>
+        </div>
+
+        <div class="sep"></div>
+
+        <div class="p-head">
+          <strong>③ 배경음악 (BGM)</strong>
+          <button class="btn primary sm" id="btnAddBgm" type="button">＋ 음원 올리기</button>
+        </div>
+        <input type="file" id="fileBgm" accept="audio/*,.mp3,.m4a,.wav,.aac,.ogg" multiple hidden>
+        <p class="hint">MP3·M4A·WAV 파일을 올리면 영상 전체에 깔립니다. 볼륨과 페이드 인·아웃을 조절하세요.</p>
+        <div id="bgmList"><div class="list-empty">아직 배경음악이 없습니다</div></div>
+      </div>
+
+    </div>
+  </section>
+</main>
+
+<!-- ============ 저장(내보내기) 모달 ============ -->
+<div class="modal" id="exportModal" hidden>
+  <div class="modal-bg" data-close></div>
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="expTitle">
+    <h2 id="expTitle">영상 저장</h2>
+    <p class="modal-desc">저장하는 동안 <b>이 화면을 켜 두세요.</b> 다른 앱으로 전환하면 녹화가 끊깁니다. 영상이 처음부터 실제로 재생되면서 저장됩니다(보통 영상 길이만큼 걸립니다).</p>
+    <label class="fld"><span>화질</span>
+      <select id="expSize">
+        <option value="1080">1080 × 1920 (권장)</option>
+        <option value="720">720 × 1280 (가볍게)</option>
+      </select>
+    </label>
+    <div class="exp-info" id="expInfo">–</div>
+    <div class="modal-actions">
+      <button class="btn ghost" data-close type="button">취소</button>
+      <button class="btn primary" id="btnDoExport" type="button">저장 시작</button>
+    </div>
+    <p class="modal-foot">100% 브라우저에서만 처리됩니다. 영상이 서버로 올라가지 않습니다.</p>
+  </div>
+</div>
+
+<!-- ============ 글 → 자동 자막 ============ -->
+<div class="modal" id="autoModal" hidden>
+  <div class="modal-bg" data-close></div>
+  <div class="modal-card wide" role="dialog" aria-modal="true" aria-labelledby="autoTitleH">
+    <h2 id="autoTitleH">📝 글로 자동 세팅</h2>
+    <p class="modal-desc">블로그 <b>제목·본문을 복사해 붙여넣으면</b> 문장·핵심 포인트 단위로 <b>4~8개 구간 자막</b>과 <b>상단 타이틀</b>을 만들고, 영상 길이에 맞춰 시간을 나눠 줍니다.</p>
+    <p class="hint tip">블로그 <b>주소(URL)</b>를 넣는 칸이 아닙니다. 주소는 보안상 앱이 열 수 없어서, 지연님이 본문을 복사해 붙여넣어 주셔야 합니다.</p>
+    <label class="fld"><span>제목 <em>선택 — 상단 타이틀이 됩니다</em></span>
+      <input type="text" id="autoTitleIn" placeholder="예) 40대 혈압, 이것만 지켜도 달라집니다"></label>
+    <label class="fld"><span>본문</span>
+      <textarea id="autoBody" rows="7" placeholder="블로그 본문을 그대로 복사해 붙여넣으세요 (소제목·목록 있어도 됩니다)"></textarea></label>
+    <div class="row2">
+      <label class="fld"><span>자막 개수</span>
+        <select id="autoCount">
+          <option value="0">자동 (4~8개)</option>
+          <option value="4">4개</option>
+          <option value="5">5개</option>
+          <option value="6">6개</option>
+          <option value="8">8개</option>
+        </select>
+      </label>
+      <label class="fld"><span>한 구간 길이</span>
+        <select id="autoLen">
+          <option value="20">짧게 (20자)</option>
+          <option value="28" selected>보통 (28자)</option>
+          <option value="40">길게 (40자)</option>
+        </select>
+      </label>
+    </div>
+    <label class="fld switch"><input type="checkbox" id="autoReplace" checked><span>기존 자막을 지우고 새로 만들기</span></label>
+    <label class="fld switch"><input type="checkbox" id="autoTitleOn" checked><span>상단 타이틀도 만들기</span></label>
+
+    <div class="auto-preview">
+      <div class="ap-head"><strong>미리보기</strong><span id="autoCount2">0개</span></div>
+      <ol class="ap-list" id="autoList"><li class="ap-empty">본문을 붙여넣으면 여기에 구간이 보입니다</li></ol>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn ghost" data-close type="button">취소</button>
+      <button class="btn primary" id="btnAutoApply" type="button">자동 분할 적용</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 도움말 ============ -->
+<div class="modal" id="helpModal" hidden>
+  <div class="modal-bg" data-close></div>
+  <div class="modal-card wide" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
+    <h2 id="helpTitle">🎬 진진 숏폼 편집기 사용법</h2>
+    <ol class="help-steps">
+      <li><b>사진·영상 올리기</b> — 위 <b>＋ 사진·영상</b> 버튼. 여러 개를 한 번에 고르면 순서대로 이어 붙습니다.</li>
+      <li><b>순서·길이 다듬기</b> — 타임라인에서 클립을 누르고 <b>분할·앞으로·뒤로·삭제</b>, <b>시작점·길이</b>로 앞뒤를 자릅니다.</li>
+      <li><b>구간 자막</b> — <b>＋ 자막 추가</b> 후 내용을 쓰고 시작·끝 초를 맞춥니다. 화면에서 끌어 위치를 옮기고 두 손가락으로 크기를 조절합니다.</li>
+      <li><b>폰트·디자인</b> — 글꼴·색·외곽선·배경박스를 바꿉니다. <b>모든 자막에 적용</b>으로 한 번에 통일할 수 있습니다.</li>
+      <li><b>스티커</b> — PNG·JPG를 올려 얹고 크기·회전·투명도를 조절합니다.</li>
+      <li><b>상단 타이틀</b> — 영상 내내 위에 붙는 훅 문구를 넣습니다.</li>
+      <li><b>오디오</b> — 원본 소리를 끄거나, <b>🎙️ 내 목소리 녹음</b>·<b>🗣️ 음성 파일</b>로 나레이션을 얹고, <b>BGM</b>을 깝니다. 세 가지가 함께 믹싱되어 저장됩니다.</li>
+      <li><b>안전영역</b> — 쇼츠·릴스·클립을 켜면 오른쪽 아이콘과 아래 설명에 가려지는 곳이 표시됩니다. 자막은 그 안쪽에 두세요.</li>
+      <li><b>글로 자동 세팅</b> — 블로그 제목·본문을 복사해 붙여넣고 <b>📝 글 → 자동 자막</b>을 누르면 4~8개 구간 자막과 상단 타이틀이 영상 길이에 맞춰 자동으로 들어갑니다.</li>
+      <li><b>화면 비율</b> — <b>9:16 세로</b>(쇼츠·릴스·클립)와 <b>16:9 가로</b>(유튜브 일반 영상)를 버튼 하나로 바꿉니다. 가로에서는 안전영역 안내가 잠깁니다.</li>
+      <li><b>MP4 저장</b> — 저장을 누르면 실제 재생되며 녹화됩니다. 끝나면 파일이 자동으로 내려받아집니다.</li>
+    </ol>
+    <div class="help-note">
+      <b>저장 형식 안내</b>
+      <p>크롬·엣지·삼성 인터넷·최신 사파리는 <b>MP4(H.264)</b>로 저장됩니다. 아주 오래된 브라우저만 <b>WebM</b>으로 저장되며, 이때는 파일 이름이 <code>.webm</code>으로 내려옵니다(유튜브 업로드는 가능, 인스타는 MP4 권장).</p>
+    </div>
+    <div class="modal-actions">
+      <button class="btn primary" data-close type="button">알겠어요</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" hidden></div>
+
+<script src="js/mp4-muxer.js?v=1.0.0"></script>
+<script src="js/app.js?v=1.0.0"></script>
+</body>
+</html>
